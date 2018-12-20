@@ -18,6 +18,12 @@ PACKAGE_FILE = os.path.join(PACKAGE_DIR, 'package.json')
 with open(PACKAGE_FILE) as package_file:
     version_string = json.load(package_file)['version']
 
+# -- wikimedia change
+# set version string manually
+# update this whenever we make a change or merge from upstream.
+version_string = '0.26.3-wikimedia1'
+
+
 with io.open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
@@ -44,6 +50,7 @@ with open(os.path.join(PACKAGE_DIR, 'version_info.json'), 'w') as version_file:
     json.dump(version_info, version_file)
 
 
+# -- wikimedia change
 def parse_requirements(filename):
     """ Load requirements from a pip requirements file"""
     lineiter = (line.strip() for line in open(filename))
@@ -53,6 +60,7 @@ def parse_requirements(filename):
 INSTALL_REQUIRES = parse_requirements('requirements.txt')
 
 
+# -- wikimedia change
 class WebpackSdistCommand(sdist):
     """
     Runs webpack in static/assets during sdist.
@@ -91,7 +99,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     # Override the usual sdist phase to run webpack first.
-    # cmdclass={'sdist': WebpackSdistCommand},
+    cmdclass={'sdist': WebpackSdistCommand},
     scripts=['superset/bin/superset'],
     install_requires=INSTALL_REQUIRES,
     extras_require={
