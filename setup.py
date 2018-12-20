@@ -10,7 +10,7 @@ import os
 import subprocess
 
 from setuptools import find_packages, setup
-from setuptools.command.sdist import sdist
+from setuptools.command.build_py import build_py
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_DIR = os.path.join(BASE_DIR, 'superset', 'static', 'assets')
@@ -61,7 +61,7 @@ INSTALL_REQUIRES = parse_requirements('requirements.txt')
 
 
 # -- wikimedia change
-class WebpackSdistCommand(sdist):
+class WebpackBuildPyCommand(build_py):
     """
     Runs webpack in static/assets during sdist.
     This will webpack up the javascript assets.
@@ -86,7 +86,7 @@ class WebpackSdistCommand(sdist):
             )
 
         # Now continue the usual sdist process.
-        sdist.run(self)
+        build_py.run(self)
 
 setup(
     name='superset',
@@ -98,8 +98,9 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
+    # -- wikimedia change
     # Override the usual sdist phase to run webpack first.
-    cmdclass={'sdist': WebpackSdistCommand},
+    cmdclass={'build_py': WebpackBuildPyCommand},
     scripts=['superset/bin/superset'],
     install_requires=INSTALL_REQUIRES,
     extras_require={

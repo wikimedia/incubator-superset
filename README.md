@@ -1,3 +1,26 @@
+
+Wikimedia fork of apache/incubator-superset
+===========================================
+
+Wikimedia maintains a fork of superset in the wikimedia branch.
+The wikimedia branch contains fixes and an augmented build process
+to keep wikimedia's (internal) deployment of superset stable.
+
+Aside from application fixes, setup.py has been changed in the following ways:
+- install_requires now populated from requirements.txt
+- cryptography requirement bumped to 2.4.2 as done in
+  https://github.com/apache/incubator-superset/pull/6516
+- build_py step now includes webpacking of static/assets, rather
+  than by external shell script pypi_push.sh
+
+Wikimedia then builds a 'deploy repository' by depending on this fork
+in https://github.com/wikimedia/analytics-superset-deploy.
+
+To update, first merge in changes from upstream (and resolve any conflicts),
+then bump the overridden `version_string` in setup.py.  It should match
+the upstream version, but suffixed with -wikimediaX (where X is the wikimedia revision).
+;
+
 Superset
 =========
 
