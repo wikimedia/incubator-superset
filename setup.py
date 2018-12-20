@@ -43,6 +43,15 @@ with open(os.path.join(PACKAGE_DIR, 'version_info.json'), 'w') as version_file:
     json.dump(version_info, version_file)
 
 
+def parse_requirements(filename):
+    """ Load requirements from a pip requirements file"""
+    lineiter = (line.strip() for line in open(filename))
+    return [line for line in lineiter if line and not line.startswith("#")]
+
+# Read install_requires from requirements.txt.
+INSTALL_REQUIRES = parse_requirements('requirements.txt')
+
+
 setup(
     name='superset',
     description=(
@@ -54,50 +63,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     scripts=['superset/bin/superset'],
-    install_requires=[
-        'bleach',
-        'boto3==1.4.7',
-        'botocore>=1.7.0, <1.8.0',
-        'celery>=4.2.0',
-        'colorama',
-        'contextlib2',
-        'cryptography',
-        'flask<1.0.0',
-        'flask-appbuilder==1.10.0',  # known db migration with 1.11+
-        'flask-caching',
-        'flask-compress',
-        'flask-migrate',
-        'flask-script',
-        'flask-testing',
-        'flask-wtf',
-        'flower',  # deprecated
-        'future>=0.16.0, <0.17',
-        'geopy',
-        'gunicorn',  # deprecated
-        'humanize',
-        'idna',
-        'markdown',
-        'pandas',
-        'parsedatetime',
-        'pathlib2',
-        'polyline',
-        'pydruid>=0.4.3',
-        'pyhive>=0.4.0',
-        'python-dateutil',
-        'python-geohash',
-        'pyyaml>=3.11',
-        'requests',
-        'simplejson>=3.15.0',
-        'six',
-        'sqlalchemy',
-        'sqlalchemy-utils',
-        'sqlparse',
-        'tableschema',
-        'thrift>=0.9.3',
-        'thrift-sasl>=0.2.1',
-        'unicodecsv',
-        'unidecode>=0.04.21',
-    ],
+    install_requires=INSTALL_REQUIRES,
     extras_require={
         'cors': ['flask-cors>=2.0.0'],
         'console_log': ['console_log==0.2.10'],
