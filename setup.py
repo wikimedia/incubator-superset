@@ -83,11 +83,11 @@ class WebpackBuildPyCommand(build_py):
         )
         if retval !=0:
             raise Exception(
-                'sdist failed during webpack in {} with {}'.format(PACKAGE_DIR, retval),
+                'build_py failed during webpack in {} with {}'.format(PACKAGE_DIR, retval),
                 file=sys.stderr
             )
 
-        # Now continue the usual sdist process.
+        # Now continue the usual build_py process.
         build_py.run(self)
 
 setup(
@@ -101,7 +101,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     # -- wikimedia change
-    # Override the usual sdist phase to run webpack first.
+    # Override the usual build_py phase to run webpack first.
     cmdclass={'build_py': WebpackBuildPyCommand},
     scripts=['superset/bin/superset'],
     install_requires=INSTALL_REQUIRES,
