@@ -21,7 +21,9 @@ with open(PACKAGE_FILE) as package_file:
 # -- wikimedia change
 # set version string manually
 # update this whenever we make a change or merge from upstream.
-version_string = '0.26.3-wikimedia1'
+# - Fix for periodicity pivot: https://github.com/wikimedia/incubator-superset/commit/c431e1bcca478901a1aaf19d6908c37095f726b8
+# - Fix for charts format() got multiple values for argument 'self': 863086023f9babc0f8e913ce737ae9545b81b80a
+version_string = '0.26.3-wikimedia2'
 
 
 with io.open('README.md', encoding='utf-8') as f:

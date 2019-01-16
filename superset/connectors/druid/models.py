@@ -522,7 +522,7 @@ class DruidDatasource(Model, BaseDatasource):
     @property
     def link(self):
         name = escape(self.datasource_name)
-        return Markup('<a href="{self.url}">{name}</a>').format(**locals())
+        return Markup('<a href="{self.url}">{name}</a>'.format(**locals()))
 
     @property
     def full_name(self):
