@@ -1,16 +1,30 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import io
 import json
 import os
 import subprocess
+import sys
 
 from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py
+
+if sys.version_info < (3, 6):
+    sys.exit('Sorry, Python < 3.6 is not supported')
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_DIR = os.path.join(BASE_DIR, 'superset', 'static', 'assets')
@@ -21,9 +35,7 @@ with open(PACKAGE_FILE) as package_file:
 # -- wikimedia change
 # set version string manually
 # update this whenever we make a change or merge from upstream.
-# - Fix for periodicity pivot: https://github.com/wikimedia/incubator-superset/commit/c431e1bcca478901a1aaf19d6908c37095f726b8
-# - Fix for charts format() got multiple values for argument 'self': 863086023f9babc0f8e913ce737ae9545b81b80a
-version_string = '0.26.3-wikimedia2'
+version_string = '0.32.0rc2-wikimedia1'
 
 
 with io.open('README.md', encoding='utf-8') as f:
@@ -91,7 +103,7 @@ class WebpackBuildPyCommand(build_py):
         build_py.run(self)
 
 setup(
-    name='superset',
+    name='apache-superset',
     description=(
         'A modern, enterprise-ready business intelligence web application'),
     long_description=long_description,
@@ -108,17 +120,22 @@ setup(
     extras_require={
         'cors': ['flask-cors>=2.0.0'],
         'console_log': ['console_log==0.2.10'],
+        'hive': [
+            'pyhive>=0.4.0',
+            'tableschema',
+            'thrift-sasl>=0.2.1',
+            'thrift>=0.9.3',
+        ],
+        'presto': ['pyhive>=0.4.0'],
+        'gsheets': ['gsheetsdb>=0.1.9'],
     },
-    author='Maxime Beauchemin',
-    author_email='maximebeauchemin@gmail.com',
-    url='https://github.com/apache/incubator-superset',
+    author='Apache Software Foundation',
+    author_email='dev@superset.incubator.apache.org',
+    url='http://superset.apache.org/',
     download_url=(
-        'https://github.com'
-        '/apache/incubator-superset/tarball/' + version_string
+        'https://dist.apache.org/repos/dist/release/superset/' + version_string
     ),
     classifiers=[
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
 )

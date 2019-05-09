@@ -1,11 +1,21 @@
-# -*- coding: utf-8 -*-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 # pylint: disable=C,R,W
 """a collection of model-related helper classes and functions"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from datetime import datetime
 import json
 import logging
@@ -21,8 +31,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import MultipleResultsFound
 import yaml
 
-from superset import security_manager
-from superset.utils import QueryStatus
+from superset.utils.core import QueryStatus
 
 
 def json_to_dict(json_str):
@@ -277,24 +286,12 @@ class AuditMixinNullable(AuditMixin):
 
     @renders('changed_on')
     def changed_on_(self):
-        return Markup(
-            '<span class="no-wrap">{}</span>'.format(self.changed_on))
+        return Markup(f'<span class="no-wrap">{self.changed_on}</span>')
 
     @renders('changed_on')
     def modified(self):
-        s = humanize.naturaltime(datetime.now() - self.changed_on)
-        return Markup('<span class="no-wrap">{}</span>'.format(s))
-
-    @property
-    def icons(self):
-        return """
-        <a
-                href="{self.datasource_edit_url}"
-                data-toggle="tooltip"
-                title="{self.datasource}">
-            <i class="fa fa-database"></i>
-        </a>
-        """.format(**locals())
+        time_str = humanize.naturaltime(datetime.now() - self.changed_on)
+        return Markup(f'<span class="no-wrap">{time_str}</span>')
 
 
 class QueryResult(object):
@@ -315,51 +312,21 @@ class QueryResult(object):
         self.error_message = error_message
 
 
-def merge_perm(sm, permission_name, view_menu_name, connection):
+class ExtraJSONMixin:
+    """Mixin to add an `extra` column (JSON) and utility methods"""
+    extra_json = sa.Column(sa.Text, default='{}')
 
-    permission = sm.find_permission(permission_name)
-    view_menu = sm.find_view_menu(view_menu_name)
-    pv = None
+    @property
+    def extra(self):
+        try:
+            return json.loads(self.extra_json)
+        except Exception:
+            return {}
 
-    if not permission:
-        permission_table = sm.permission_model.__table__
-        connection.execute(
-            permission_table.insert()
-            .values(name=permission_name),
-        )
-    if not view_menu:
-        view_menu_table = sm.viewmenu_model.__table__
-        connection.execute(
-            view_menu_table.insert()
-            .values(name=view_menu_name),
-        )
+    def set_extra_json(self, d):
+        self.extra_json = json.dumps(d)
 
-    permission = sm.find_permission(permission_name)
-    view_menu = sm.find_view_menu(view_menu_name)
-
-    if permission and view_menu:
-        pv = sm.get_session.query(sm.permissionview_model).filter_by(
-            permission=permission, view_menu=view_menu).first()
-    if not pv and permission and view_menu:
-        permission_view_table = sm.permissionview_model.__table__
-        connection.execute(
-            permission_view_table.insert()
-            .values(
-                permission_id=permission.id,
-                view_menu_id=view_menu.id,
-            ),
-        )
-
-
-def set_perm(mapper, connection, target):  # noqa
-
-    if target.perm != target.get_perm():
-        link_table = target.__table__
-        connection.execute(
-            link_table.update()
-            .where(link_table.c.id == target.id)
-            .values(perm=target.get_perm()),
-        )
-
-    # add to view menu if not already exists
-    merge_perm(security_manager, 'datasource_access', target.get_perm(), connection)
+    def set_extra_json_key(self, key, value):
+        extra = self.extra
+        extra[key] = value
+        self.extra_json = json.dumps(extra)

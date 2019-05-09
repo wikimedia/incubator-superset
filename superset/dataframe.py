@@ -1,4 +1,19 @@
-# -*- coding: utf-8 -*-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 # pylint: disable=C,R,W
 """ Superset wrapper around pandas.DataFrame.
 
@@ -7,11 +22,6 @@ TODO(bkyryliuk): add support for the conventions like: *_dim or dim_*
 TODO(bkyryliuk): recognize integer encoded enums.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from datetime import date, datetime
 import logging
 
@@ -19,31 +29,33 @@ import numpy as np
 import pandas as pd
 from pandas.core.common import _maybe_box_datetimelike
 from pandas.core.dtypes.dtypes import ExtensionDtype
-from past.builtins import basestring
 
-from superset.utils import JS_MAX_INTEGER
+from superset.utils.core import JS_MAX_INTEGER
 
 INFER_COL_TYPES_THRESHOLD = 95
 INFER_COL_TYPES_SAMPLE_SIZE = 100
 
 
-def dedup(l, suffix='__'):
+def dedup(l, suffix='__', case_sensitive=True):
     """De-duplicates a list of string by suffixing a counter
 
     Always returns the same number of entries as provided, and always returns
-    unique values.
+    unique values. Case sensitive comparison by default.
 
-    >>> print(','.join(dedup(['foo', 'bar', 'bar', 'bar'])))
-    foo,bar,bar__1,bar__2
+    >>> print(','.join(dedup(['foo', 'bar', 'bar', 'bar', 'Bar'])))
+    foo,bar,bar__1,bar__2,Bar
+    >>> print(','.join(dedup(['foo', 'bar', 'bar', 'bar', 'Bar'], case_sensitive=False)))
+    foo,bar,bar__1,bar__2,Bar__3
     """
     new_l = []
     seen = {}
     for s in l:
-        if s in seen:
-            seen[s] += 1
-            s += suffix + str(seen[s])
+        s_fixed_case = s if case_sensitive else s.lower()
+        if s_fixed_case in seen:
+            seen[s_fixed_case] += 1
+            s += suffix + str(seen[s_fixed_case])
         else:
-            seen[s] = 0
+            seen[s_fixed_case] = 0
         new_l.append(s)
     return new_l
 
@@ -70,12 +82,11 @@ class SupersetDataFrame(object):
         if cursor_description:
             column_names = [col[0] for col in cursor_description]
 
-        self.column_names = dedup(
-            db_engine_spec.get_normalized_column_names(cursor_description))
+        self.column_names = dedup(column_names)
 
         data = data or []
         self.df = (
-            pd.DataFrame(list(data), columns=column_names).infer_objects())
+            pd.DataFrame(list(data), columns=self.column_names).infer_objects())
 
         self._type_dict = {}
         try:
@@ -128,10 +139,19 @@ class SupersetDataFrame(object):
                 continue
         return 100 * success / total
 
-    @classmethod
-    def is_date(cls, dtype):
-        if dtype.name:
-            return dtype.name.startswith('datetime')
+    @staticmethod
+    def is_date(np_dtype, db_type_str):
+
+        def looks_daty(s):
+            if isinstance(s, str):
+                return any([s.lower().startswith(ss) for ss in ('time', 'date')])
+            return False
+
+        if looks_daty(db_type_str):
+            return True
+        if np_dtype and np_dtype.name and looks_daty(np_dtype.name):
+            return True
+        return False
 
     @classmethod
     def is_dimension(cls, dtype, column_name):
@@ -168,21 +188,21 @@ class SupersetDataFrame(object):
         if sample_size:
             sample = self.df.sample(sample_size)
         for col in self.df.dtypes.keys():
-            col_db_type = (
+            db_type_str = (
                 self._type_dict.get(col) or
                 self.db_type(self.df.dtypes[col])
             )
             column = {
                 'name': col,
                 'agg': self.agg_func(self.df.dtypes[col], col),
-                'type': col_db_type,
-                'is_date': self.is_date(self.df.dtypes[col]),
+                'type': db_type_str,
+                'is_date': self.is_date(self.df.dtypes[col], db_type_str),
                 'is_dim': self.is_dimension(self.df.dtypes[col], col),
             }
 
-            if column['type'] in ('OBJECT', None):
+            if not db_type_str or db_type_str.upper() == 'OBJECT':
                 v = sample[col].iloc[0] if not sample[col].empty else None
-                if isinstance(v, basestring):
+                if isinstance(v, str):
                     column['type'] = 'STRING'
                 elif isinstance(v, int):
                     column['type'] = 'INT'

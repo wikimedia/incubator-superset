@@ -1,3 +1,4 @@
+// [LICENSE TBD]
 /* Copied and altered from http://cal-heatmap.com/ , alterations around:
  * - tuning tooltips
  * - supporting multi-colors scales
@@ -897,7 +898,7 @@ var CalHeatMap = function() {
         if (options.tooltip) {
           selection
           .on("mouseover", function(d) {
-            self.tip.show(d);
+            self.tip.show(d, this);
           })
           .on("mouseout", function() {
             self.tip.hide(d);
@@ -3285,7 +3286,7 @@ Legend.prototype.redraw = function(width) {
   });
   legendItem
   .on("mouseover", function(d) {
-    calendar.legendTip.show(d);
+    calendar.legendTip.show(d, this);
   })
   .on("mouseout", function() {
     calendar.legendTip.hide();
@@ -3498,17 +3499,4 @@ function arrayEquals(arrayA, arrayB) {
   return true;
 }
 
-/**
- * AMD Loader
- */
-if (typeof define === "function" && define.amd) {
-  define(["d3"], function() {
-    "use strict";
-
-    return CalHeatMap;
-  });
-} else if (typeof module === "object" && module.exports) {
-  module.exports = CalHeatMap;
-} else {
-  window.CalHeatMap = CalHeatMap;
-}
+export default CalHeatMap;

@@ -1,7 +1,23 @@
-/* eslint-disable no-unused-expressions */
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
-import { expect } from 'chai';
-import { describe, it } from 'mocha';
+import configureStore from 'redux-mock-store';
 import { shallow } from 'enzyme';
 
 import MetricDefinitionOption from '../../../../src/explore/components/MetricDefinitionOption';
@@ -10,18 +26,25 @@ import ColumnOption from '../../../../src/components/ColumnOption';
 import AggregateOption from '../../../../src/explore/components/AggregateOption';
 
 describe('MetricDefinitionOption', () => {
+  const mockStore = configureStore([]);
+  const store = mockStore({});
+
+  function setup(props) {
+    return shallow(<MetricDefinitionOption {...props} />, { context: { store } }).dive();
+  }
+
   it('renders a MetricOption given a saved metric', () => {
-    const wrapper = shallow(<MetricDefinitionOption option={{ metric_name: 'a_saved_metric' }} />);
-    expect(wrapper.find(MetricOption)).to.have.lengthOf(1);
+    const wrapper = setup({ option: { metric_name: 'a_saved_metric' } });
+    expect(wrapper.find(MetricOption)).toHaveLength(1);
   });
 
   it('renders a ColumnOption given a column', () => {
-    const wrapper = shallow(<MetricDefinitionOption option={{ column_name: 'a_column' }} />);
-    expect(wrapper.find(ColumnOption)).to.have.lengthOf(1);
+    const wrapper = setup({ option: { column_name: 'a_column' } });
+    expect(wrapper.find(ColumnOption)).toHaveLength(1);
   });
 
   it('renders an AggregateOption given an aggregate metric', () => {
-    const wrapper = shallow(<MetricDefinitionOption option={{ aggregate_name: 'an_aggregate' }} />);
-    expect(wrapper.find(AggregateOption)).to.have.lengthOf(1);
+    const wrapper = setup({ option: { aggregate_name: 'an_aggregate' } });
+    expect(wrapper.find(AggregateOption)).toHaveLength(1);
   });
 });

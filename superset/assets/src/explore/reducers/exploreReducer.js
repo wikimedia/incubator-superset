@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 /* eslint camelcase: 0 */
 import { getControlsState, getFormDataFromControls } from '../store';
 import * as actions from '../actions/exploreActions';
@@ -10,27 +28,13 @@ export default function exploreReducer(state = {}, action) {
         isStarred: action.isStarred,
       };
     },
-    [actions.FETCH_DATASOURCE_STARTED]() {
+    [actions.POST_DATASOURCE_STARTED]() {
       return {
         ...state,
         isDatasourceMetaLoading: true,
       };
     },
-    [actions.FETCH_DATASOURCE_SUCCEEDED]() {
-      return {
-        ...state,
-        isDatasourceMetaLoading: false,
-      };
-    },
-    [actions.FETCH_DATASOURCE_FAILED]() {
-      return {
-        ...state,
-        isDatasourceMetaLoading: false,
-        controlPanelAlert: action.error,
-      };
-    },
     [actions.SET_DATASOURCE]() {
-
       return {
         ...state,
         datasource: action.datasource,
@@ -81,11 +85,14 @@ export default function exploreReducer(state = {}, action) {
       };
       if (control.renderTrigger) {
         changes.triggerRender = true;
+      } else {
+        changes.triggerRender = false;
       }
-      return {
+      const newState = {
         ...state,
         ...changes,
       };
+      return newState;
     },
     [actions.SET_EXPLORE_CONTROLS]() {
       return {

@@ -1,13 +1,34 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Alert, Button, ButtonGroup, ProgressBar } from 'react-bootstrap';
 import shortid from 'shortid';
+import { t } from '@superset-ui/translation';
 
-import VisualizeModal from './VisualizeModal';
+import Loading from '../../components/Loading';
+import ExploreResultsButton from './ExploreResultsButton';
 import HighlightedSql from './HighlightedSql';
 import FilterableTable from '../../components/FilterableTable/FilterableTable';
 import QueryStateLabel from './QueryStateLabel';
-import { t } from '../../locales';
+import CopyToClipboard from '../../components/CopyToClipboard';
+import { prepareCopyToClipboardTabularData } from '../../utils/common';
 
 const propTypes = {
   actions: PropTypes.object,
@@ -18,6 +39,7 @@ const propTypes = {
   visualize: PropTypes.bool,
   cache: PropTypes.bool,
   height: PropTypes.number.isRequired,
+  database: PropTypes.object,
 };
 const defaultProps = {
   search: true,
@@ -26,18 +48,22 @@ const defaultProps = {
   csv: true,
   actions: {},
   cache: false,
+  database: {},
 };
 
 const SEARCH_HEIGHT = 46;
+
+const LOADING_STYLES = { position: 'relative', minHeight: 100 };
 
 export default class ResultSet extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
       searchText: '',
-      showModal: false,
+      showExploreResultsButton: false,
       data: null,
     };
+    this.toggleExploreResultsButton = this.toggleExploreResultsButton.bind(this);
   }
   componentDidMount() {
     // only do this the first time the component is rendered/mounted
@@ -58,56 +84,6 @@ export default class ResultSet extends React.PureComponent {
       this.fetchResults(nextProps.query);
     }
   }
-  getControls() {
-    if (this.props.search || this.props.visualize || this.props.csv) {
-      let csvButton;
-      if (this.props.csv) {
-        csvButton = (
-          <Button bsSize="small" href={'/superset/csv/' + this.props.query.id}>
-            <i className="fa fa-file-text-o" /> {t('.CSV')}
-          </Button>
-        );
-      }
-      let visualizeButton;
-      if (this.props.visualize) {
-        visualizeButton = (
-          <Button
-            bsSize="small"
-            onClick={this.showModal.bind(this)}
-          >
-            <i className="fa fa-line-chart m-l-1" /> {t('Visualize')}
-          </Button>
-        );
-      }
-      let searchBox;
-      if (this.props.search) {
-        searchBox = (
-          <input
-            type="text"
-            onChange={this.changeSearch.bind(this)}
-            className="form-control input-sm"
-            placeholder={t('Search Results')}
-          />
-        );
-      }
-      return (
-        <div className="ResultSetControls">
-          <div className="clearfix">
-            <div className="pull-left">
-              <ButtonGroup>
-                {visualizeButton}
-                {csvButton}
-              </ButtonGroup>
-            </div>
-            <div className="pull-right">
-              {searchBox}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return <div className="noControls" />;
-  }
   clearQueryResults(query) {
     this.props.actions.clearQueryResults(query);
   }
@@ -121,11 +97,8 @@ export default class ResultSet extends React.PureComponent {
     };
     this.props.actions.addQueryEditor(qe);
   }
-  showModal() {
-    this.setState({ showModal: true });
-  }
-  hideModal() {
-    this.setState({ showModal: false });
+  toggleExploreResultsButton() {
+    this.setState({ showExploreResultsButton: !this.state.showExploreResultsButton });
   }
   changeSearch(event) {
     this.setState({ searchText: event.target.value });
@@ -141,6 +114,51 @@ export default class ResultSet extends React.PureComponent {
     if (query.errorMessage && query.errorMessage.indexOf('session timed out') > 0) {
       this.props.actions.runQuery(query, true);
     }
+  }
+  renderControls() {
+    if (this.props.search || this.props.visualize || this.props.csv) {
+      return (
+        <div className="ResultSetControls">
+          <div className="clearfix">
+            <div className="pull-left">
+              <ButtonGroup>
+                {this.props.visualize &&
+                  <ExploreResultsButton
+                    query={this.props.query}
+                    database={this.props.database}
+                    actions={this.props.actions}
+                  />}
+                {this.props.csv &&
+                  <Button bsSize="small" href={'/superset/csv/' + this.props.query.id}>
+                    <i className="fa fa-file-text-o" /> {t('.CSV')}
+                  </Button>}
+
+                <CopyToClipboard
+                  text={prepareCopyToClipboardTabularData(this.props.query.results.data)}
+                  wrapped={false}
+                  copyNode={
+                    <Button bsSize="small">
+                      <i className="fa fa-clipboard" /> {t('Clipboard')}
+                    </Button>
+                  }
+                />
+              </ButtonGroup>
+            </div>
+            <div className="pull-right">
+              {this.props.search &&
+                <input
+                  type="text"
+                  onChange={this.changeSearch.bind(this)}
+                  className="form-control input-sm"
+                  placeholder={t('Search Results')}
+                />
+              }
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return <div className="noControls" />;
   }
   render() {
     const query = this.props.query;
@@ -158,7 +176,7 @@ export default class ResultSet extends React.PureComponent {
       return (
         <Alert bsStyle="danger">
           {query.errorMessage}
-          {query.link && <a href={query.link}> {t('(Common errors and their resolutions)')} </a>}
+          {query.link && <a href={query.link}> {t('(Request Access)')} </a>}
         </Alert>);
     } else if (query.state === 'success' && query.ctas) {
       return (
@@ -186,12 +204,7 @@ export default class ResultSet extends React.PureComponent {
       if (data && data.length > 0) {
         return (
           <div>
-            <VisualizeModal
-              show={this.state.showModal}
-              query={this.props.query}
-              onHide={this.hideModal.bind(this)}
-            />
-            {this.getControls.bind(this)()}
+            {this.renderControls.bind(this)()}
             {sql}
             <FilterableTable
               data={data}
@@ -218,7 +231,7 @@ export default class ResultSet extends React.PureComponent {
     }
     let progressBar;
     let trackingUrl;
-    if (query.progress > 0 && query.state === 'running') {
+    if (query.progress > 0) {
       progressBar = (
         <ProgressBar
           striped
@@ -236,11 +249,19 @@ export default class ResultSet extends React.PureComponent {
         </Button>
       );
     }
+    const progressMsg = query && query.extra && query.extra.progress ? query.extra.progress : null;
     return (
-      <div>
-        <img className="loading" alt={t('Loading...')} src="/static/assets/images/loading.gif" />
+      <div style={LOADING_STYLES}>
+        <div>
+          {!progressBar && <Loading position="normal" />}
+        </div>
         <QueryStateLabel query={query} />
-        {progressBar}
+        <div>
+          {progressMsg && <Alert bsStyle="success">{progressMsg}</Alert>}
+        </div>
+        <div>
+          {progressBar}
+        </div>
         <div>
           {trackingUrl}
         </div>

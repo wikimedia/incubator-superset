@@ -1,3 +1,19 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 """adhoc filters
 
 Revision ID: bddc498dd179
@@ -20,7 +36,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Text
 
 from superset import db
-from superset import utils
+from superset.utils.core import (
+    convert_legacy_filters_into_adhoc, split_adhoc_filters_into_base_filters)
 
 
 Base = declarative_base()
@@ -36,39 +53,11 @@ class Slice(Base):
 def upgrade():
     bind = op.get_bind()
     session = db.Session(bind=bind)
-    mapping = {'having': 'having_filters', 'where': 'filters'}
 
     for slc in session.query(Slice).all():
         try:
             params = json.loads(slc.params)
-
-            if not 'adhoc_filters' in params:
-                params['adhoc_filters'] = []
-
-                for clause, filters in mapping.items():
-                    if clause in params and params[clause] != '':
-                        params['adhoc_filters'].append({
-                            'clause': clause.upper(),
-                            'expressionType': 'SQL',
-                            'filterOptionName': str(uuid.uuid4()),
-                            'sqlExpression': params[clause],
-                        })
-
-                    if filters in params:
-                        for filt in params[filters]:
-                            params['adhoc_filters'].append({
-                                'clause': clause.upper(),
-                                'comparator': filt['val'],
-                                'expressionType': 'SIMPLE',
-                                'filterOptionName': str(uuid.uuid4()),
-                                'operator': filt['op'],
-                                'subject': filt['col'],
-                            })
-
-            for key in ('filters', 'having', 'having_filters', 'where'):
-                if key in params:
-                    del params[key]
-
+            convert_legacy_filters_into_adhoc(params)
             slc.params = json.dumps(params, sort_keys=True)
         except Exception:
             pass
@@ -84,7 +73,7 @@ def downgrade():
     for slc in session.query(Slice).all():
         try:
             params = json.loads(slc.params)
-            utils.split_adhoc_filters_into_base_filters(params)
+            split_adhoc_filters_into_base_filters(params)
 
             if 'adhoc_filters' in params:
                 del params['adhoc_filters']

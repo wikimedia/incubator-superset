@@ -1,11 +1,21 @@
-# -*- coding: utf-8 -*-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 # pylint: disable=C,R,W
 """Views used by the SqlAlchemy connector"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from flask import flash, Markup, redirect
 from flask_appbuilder import CompactCRUDMixin, expose
 from flask_appbuilder.actions import action
@@ -13,12 +23,12 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_appbuilder.security.decorators import has_access
 from flask_babel import gettext as __
 from flask_babel import lazy_gettext as _
-from past.builtins import basestring
 
-from superset import appbuilder, db, security_manager, utils
+from superset import appbuilder, db, security_manager
 from superset.connectors.base.views import DatasourceModelView
+from superset.utils import core as utils
 from superset.views.base import (
-    DatasourceFilter, DeleteMixin, get_datasource_exist_error_mgs,
+    DatasourceFilter, DeleteMixin, get_datasource_exist_error_msg,
     ListWidgetWithCheckboxes, SupersetModelView, YamlExportMixin,
 )
 from . import models
@@ -113,7 +123,7 @@ class SqlMetricInlineView(CompactCRUDMixin, SupersetModelView):  # noqa
         'expression': utils.markdown(
             'a valid, *aggregating* SQL expression as supported by the '
             'underlying backend. Example: `count(DISTINCT userid)`', True),
-        'is_restricted': _('Whether the access to this metric is restricted '
+        'is_restricted': _('Whether access to this metric is restricted '
                            'to certain roles. Only roles with the permission '
                            "'metric access on XXX (the name of this metric)' "
                            'are allowed to access this metric'),
@@ -156,18 +166,18 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
 
     list_title = _('List Tables')
     show_title = _('Show Table')
-    add_title = _('Add Table')
+    add_title = _('Import a table definition')
     edit_title = _('Edit Table')
 
     list_columns = [
-        'link', 'database',
+        'link', 'database_name',
         'changed_by_', 'modified']
     order_columns = ['modified']
     add_columns = ['database', 'schema', 'table_name']
     edit_columns = [
         'table_name', 'sql', 'filter_select_enabled',
         'fetch_values_predicate', 'database', 'schema',
-        'description', 'owner',
+        'description', 'owners',
         'main_dttm_col', 'default_endpoint', 'offset', 'cache_timeout',
         'is_sqllab_view', 'template_params',
     ]
@@ -176,7 +186,7 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
     related_views = [TableColumnInlineView, SqlMetricInlineView]
     base_order = ('changed_on', 'desc')
     search_columns = (
-        'database', 'schema', 'table_name', 'owner', 'is_sqllab_view',
+        'database', 'schema', 'table_name', 'owners', 'is_sqllab_view',
     )
     description_columns = {
         'slices': _(
@@ -219,12 +229,17 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
         'template_params': _(
             'A set of parameters that become available in the query using '
             'Jinja templating syntax'),
+        'cache_timeout': _(
+            'Duration (in seconds) of the caching timeout for this table. '
+            'A timeout of 0 indicates that the cache never expires. '
+            'Note this defaults to the database timeout if undefined.'),
     }
     label_columns = {
         'slices': _('Associated Charts'),
         'link': _('Table'),
         'changed_by_': _('Changed By'),
         'database': _('Database'),
+        'database_name': _('Database'),
         'changed_on_': _('Last Changed'),
         'filter_select_enabled': _('Enable Filter Select'),
         'schema': _('Schema'),
@@ -233,11 +248,12 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
         'cache_timeout': _('Cache Timeout'),
         'table_name': _('Table Name'),
         'fetch_values_predicate': _('Fetch Values Predicate'),
-        'owner': _('Owner'),
+        'owners': _('Owners'),
         'main_dttm_col': _('Main Datetime Column'),
         'description': _('Description'),
         'is_sqllab_view': _('SQL Lab View'),
         'template_params': _('Template parameters'),
+        'modified': _('Modified'),
     }
 
     def pre_add(self, table):
@@ -248,7 +264,7 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
                 models.SqlaTable.database_id == table.database.id)
             if db.session.query(table_query.exists()).scalar():
                 raise Exception(
-                    get_datasource_exist_error_mgs(table.full_name))
+                    get_datasource_exist_error_msg(table.full_name))
 
         # Fail before adding if the table can't be found
         try:
@@ -269,7 +285,7 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
         if flash_message:
             flash(_(
                 'The table was created. '
-                'As part of this two phase configuration '
+                'As part of this two-phase configuration '
                 'process, you should now click the edit button by '
                 'the new table to configure it.'), 'info')
 
@@ -284,7 +300,7 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
     def edit(self, pk):
         """Simple hack to redirect to explore view after saving"""
         resp = super(TableModelView, self).edit(pk)
-        if isinstance(resp, basestring):
+        if isinstance(resp, str):
             return resp
         return redirect('/superset/explore/table/{}/'.format(pk))
 
@@ -296,12 +312,26 @@ class TableModelView(DatasourceModelView, DeleteMixin, YamlExportMixin):  # noqa
     def refresh(self, tables):
         if not isinstance(tables, list):
             tables = [tables]
+        successes = []
+        failures = []
         for t in tables:
-            t.fetch_metadata()
-        msg = _(
-            'Metadata refreshed for the following table(s): %(tables)s',
-            tables=', '.join([t.table_name for t in tables]))
-        flash(msg, 'info')
+            try:
+                t.fetch_metadata()
+                successes.append(t)
+            except Exception:
+                failures.append(t)
+
+        if len(successes) > 0:
+            success_msg = _(
+                'Metadata refreshed for the following table(s): %(tables)s',
+                tables=', '.join([t.table_name for t in successes]))
+            flash(success_msg, 'info')
+        if len(failures) > 0:
+            failure_msg = _(
+                'Unable to retrieve metadata for the following table(s): %(tables)s',
+                tables=', '.join([t.table_name for t in failures]))
+            flash(failure_msg, 'danger')
+
         return redirect('/tablemodelview/list/')
 
 
@@ -310,7 +340,7 @@ appbuilder.add_link(
     'Tables',
     label=__('Tables'),
     href='/tablemodelview/list/?_flt_1_is_sqllab_view=y',
-    icon='fa-upload',
+    icon='fa-table',
     category='Sources',
     category_label=__('Sources'),
     category_icon='fa-table')

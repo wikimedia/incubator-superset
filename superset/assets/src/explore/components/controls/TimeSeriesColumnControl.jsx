@@ -1,12 +1,32 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
   Row, Col, FormControl, OverlayTrigger, Popover,
 } from 'react-bootstrap';
 import Select from 'react-select';
+import { t } from '@superset-ui/translation';
 
 import InfoTooltipWithTrigger from '../../../components/InfoTooltipWithTrigger';
 import BoundsControl from './BoundsControl';
+import CheckboxControl from './CheckboxControl';
 
 const propTypes = {
   onChange: PropTypes.func,
@@ -47,8 +67,14 @@ export default class TimeSeriesColumnControl extends React.Component {
   onTextInputChange(attr, event) {
     this.setState({ [attr]: event.target.value }, this.onChange);
   }
+  onCheckboxChange(attr, value) {
+    this.setState({ [attr]: value }, this.onChange);
+  }
   onBoundsChange(bounds) {
     this.setState({ bounds }, this.onChange);
+  }
+  onYAxisBoundsChange(yAxisBounds) {
+    this.setState({ yAxisBounds }, this.onChange);
   }
   setType() {
   }
@@ -77,9 +103,9 @@ export default class TimeSeriesColumnControl extends React.Component {
       <Popover id="ts-col-popo" title="Column Configuration">
         <div style={{ width: 300 }}>
           {this.formRow(
-            'Label',
-            'The column header label',
-            'time-lag',
+            t('Label'),
+            t('The column header label'),
+            'row-label',
             <FormControl
               value={this.state.label}
               onChange={this.onTextInputChange.bind(this, 'label')}
@@ -88,8 +114,8 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {this.formRow(
-            'Tooltip',
-            'Column header tooltip',
+            t('Tooltip'),
+            t('Column header tooltip'),
             'col-tooltip',
             <FormControl
               value={this.state.tooltip}
@@ -99,8 +125,8 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {this.formRow(
-            'Type',
-            'Type of comparison, value difference or percentage',
+            t('Type'),
+            t('Type of comparison, value difference or percentage'),
             'col-type',
             <Select
               value={this.state.colType}
@@ -111,8 +137,8 @@ export default class TimeSeriesColumnControl extends React.Component {
           )}
           <hr />
           {this.state.colType === 'spark' && this.formRow(
-            'Width',
-            'Width of the sparkline',
+            t('Width'),
+            t('Width of the sparkline'),
             'spark-width',
             <FormControl
               value={this.state.width}
@@ -122,8 +148,8 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {this.state.colType === 'spark' && this.formRow(
-            'Height',
-            'Height of the sparkline',
+            t('Height'),
+            t('Height of the sparkline'),
             'spark-width',
             <FormControl
               value={this.state.height}
@@ -133,8 +159,8 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {['time', 'avg'].indexOf(this.state.colType) >= 0 && this.formRow(
-            'Time Lag',
-            'Number of periods to compare against',
+            t('Time Lag'),
+            t('Number of periods to compare against'),
             'time-lag',
             <FormControl
               value={this.state.timeLag}
@@ -144,19 +170,19 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {['spark'].indexOf(this.state.colType) >= 0 && this.formRow(
-            'Time Ratio',
-            'Number of periods to ratio against',
+            t('Time Ratio'),
+            t('Number of periods to ratio against'),
             'time-ratio',
             <FormControl
               value={this.state.timeRatio}
               onChange={this.onTextInputChange.bind(this, 'timeRatio')}
               bsSize="small"
-              placeholder="Time Lag"
+              placeholder="Time Ratio"
             />,
           )}
           {this.state.colType === 'time' && this.formRow(
-            'Type',
-            'Type of comparison, value difference or percentage',
+            t('Type'),
+            t('Type of comparison, value difference or percentage'),
             'comp-type',
             <Select
               value={this.state.comparisonType}
@@ -165,12 +191,34 @@ export default class TimeSeriesColumnControl extends React.Component {
               options={comparisonTypeOptions}
             />,
           )}
+          {this.state.colType === 'spark' && this.formRow(
+            t('Show Y-axis'),
+            t(
+              'Show Y-axis on the sparkline. Will display the manually set min/max if set or min/max values in the data otherwise.',
+            ),
+            'show-y-axis-bounds',
+            <CheckboxControl
+              value={this.state.showYAxis}
+              onChange={this.onCheckboxChange.bind(this, 'showYAxis')}
+            />,
+          )}
+          {this.state.colType === 'spark' && this.formRow(
+            t('Y-axis bounds'),
+            t(
+              'Manually set min/max values for the y-axis.',
+            ),
+            'y-axis-bounds',
+            <BoundsControl
+              value={this.state.yAxisBounds}
+              onChange={this.onYAxisBoundsChange.bind(this)}
+            />,
+          )}
           {this.state.colType !== 'spark' && this.formRow(
-            'Color bounds',
-            (
+            t('Color bounds'),
+            t(
               `Number bounds used for color encoding from red to blue.
               Reverse the numbers for blue to red. To get pure red or blue,
-              you can enter either only min or max.`
+              you can enter either only min or max.`,
             ),
             'bounds',
             <BoundsControl
@@ -179,8 +227,8 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {this.formRow(
-            'Number format',
-            'Optional d3 number format string',
+            t('Number format'),
+            t('Optional d3 number format string'),
             'd3-format',
             <FormControl
               value={this.state.d3format}
@@ -190,8 +238,8 @@ export default class TimeSeriesColumnControl extends React.Component {
             />,
           )}
           {this.state.colType === 'spark' && this.formRow(
-            'Date format',
-            'Optional d3 date format string',
+            t('Date format'),
+            t('Optional d3 date format string'),
             'date-format',
             <FormControl
               value={this.state.dateFormat}

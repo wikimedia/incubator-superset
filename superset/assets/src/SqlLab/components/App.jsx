@@ -1,15 +1,32 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
+import $ from 'jquery';
 
 import TabbedSqlEditors from './TabbedSqlEditors';
 import QueryAutoRefresh from './QueryAutoRefresh';
 import QuerySearch from './QuerySearch';
-import AlertsWrapper from '../../components/AlertsWrapper';
-import * as Actions from '../actions';
-
-const $ = window.$ = require('jquery');
+import ToastPresenter from '../../messageToasts/containers/ToastPresenter';
+import * as Actions from '../actions/sqlLab';
 
 class App extends React.PureComponent {
   constructor(props) {
@@ -39,8 +56,10 @@ class App extends React.PureComponent {
     const alertEl = $('#sqllab-alerts');
     const headerEl = $('header .navbar');
     const headerHeight = headerEl.outerHeight() + parseInt(headerEl.css('marginBottom'), 10);
-    const searchHeaderHeight = searchHeaderEl.length > 0 ?
-      searchHeaderEl.outerHeight() + parseInt(searchHeaderEl.css('marginBottom'), 10) : 0;
+    const searchHeaderHeight =
+      searchHeaderEl.length > 0
+        ? searchHeaderEl.outerHeight() + parseInt(searchHeaderEl.css('marginBottom'), 10)
+        : 0;
     const tabsHeight = tabsEl.length > 0 ? tabsEl.outerHeight() : searchHeaderHeight;
     const warningHeight = warningEl.length > 0 ? warningEl.outerHeight() : 0;
     const alertHeight = alertEl.length > 0 ? alertEl.outerHeight() : 0;
@@ -65,33 +84,23 @@ class App extends React.PureComponent {
       content = (
         <div>
           <QueryAutoRefresh />
-          <TabbedSqlEditors getHeight={this.getHeight} />
+          <TabbedSqlEditors />
         </div>
       );
     }
     return (
       <div className="App SqlLab">
-        <AlertsWrapper initMessages={this.props.initMessages} />
-        <div className="container-fluid">
-          {content}
-        </div>
+        <div className="container-fluid">{content}</div>
+        <ToastPresenter />
       </div>
     );
   }
 }
 
 App.propTypes = {
-  alerts: PropTypes.array,
   actions: PropTypes.object,
-  initMessages: PropTypes.array,
 };
 
-function mapStateToProps(state) {
-  return {
-    alerts: state.alerts,
-    initMessages: state.flash_messages,
-  };
-}
 function mapDispatchToProps(dispatch) {
   return {
     actions: bindActionCreators(Actions, dispatch),
@@ -99,4 +108,7 @@ function mapDispatchToProps(dispatch) {
 }
 
 export { App };
-export default connect(mapStateToProps, mapDispatchToProps)(App);
+export default connect(
+  null,
+  mapDispatchToProps,
+)(App);
