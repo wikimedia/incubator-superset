@@ -91,7 +91,7 @@ class WebpackBuildPyCommand(build_py):
         # webpack succeeds. Just call webpack.
         # NOTE: Using subprocess fails, whereas os.system succeeds. Not sure why.
         retval = os.system(
-            'cd {} && ./node_modules/.bin/webpack && cd {}'.format(PACKAGE_DIR, BASE_DIR)
+            'cd {} && /usr/bin/npm --max_old_space_size=4096 run build && cd {}'.format(PACKAGE_DIR, BASE_DIR)
         )
         if retval !=0:
             raise Exception(
